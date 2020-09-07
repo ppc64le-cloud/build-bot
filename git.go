@@ -285,7 +285,7 @@ func gitInit() error {
 		if err != nil {
 			return err
 		}
-		token = string(secret)
+		token = string(bytes.TrimSpace(secret))
 	}
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 	tc := oauth2.NewClient(ctx, ts)
