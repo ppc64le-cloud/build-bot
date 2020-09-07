@@ -272,9 +272,23 @@ func handlePostBuild(req *http.Request) error {
 	return nil
 }
 
-func init() {
-	token := os.Getenv("GITHUB_AUTH_TOKEN")
+func gitInit() error {
+	var token string
+	// override the token set in the GITHUB_AUTH_TOKEN env if any
+	if tkn := os.Getenv("GITHUB_AUTH_TOKEN"); tkn != "" {
+		token = tkn
+	} else {
+		if tokenPath == "" {
+			return fmt.Errorf("github token is missing, either --github-token-path or GITHUB_AUTH_TOKEN env is missing")
+		}
+		secret, err := ioutil.ReadFile(tokenPath)
+		if err != nil {
+			return err
+		}
+		token = string(secret)
+	}
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 	tc := oauth2.NewClient(ctx, ts)
 	client = github.NewClient(tc)
+	return nil
 }
