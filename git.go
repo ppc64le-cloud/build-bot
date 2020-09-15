@@ -152,7 +152,7 @@ func handleGetBuild(w http.ResponseWriter, req *http.Request) error {
 		size := strconv.FormatInt(int64(len(content)), 10)
 
 		//Send the headers
-		w.Header().Set("Content-Disposition", "attachment; filename="+build.Artifacts)
+		w.Header().Set("Content-Disposition", "attachment; filename="+build.Artifacts[0])
 		w.Header().Set("Content-Type", contentType)
 		w.Header().Set("Content-Length", size)
 
@@ -169,8 +169,6 @@ func getFromFile(keyname string, req *http.Request) ([]byte, string, error) {
 		return nil, "", fmt.Errorf("failed to get the %s from formFile", keyname)
 	}
 	defer formFile.Close()
-	name := strings.Split(header.Filename, ".")
-	fmt.Printf("File name %s\n", name[0])
 	io.Copy(&buf, formFile)
 	defer buf.Reset()
 	return buf.Bytes(), header.Filename, nil
@@ -178,47 +176,47 @@ func getFromFile(keyname string, req *http.Request) ([]byte, string, error) {
 
 func handlePostBuild(req *http.Request) error {
 	klog.Infoln("Entry: handlePostBuild")
-	params := req.URL.Query()
-	dryrun := params.Get("dryrun")
-
 	klog.Infoln("Parsing ParseMultipartForm")
 	if err := req.ParseMultipartForm(32 << 20); err != nil {
 		klog.Errorf("failed to ParseMultipartForm")
 		return fmt.Errorf("failed to ParseMultipartForm")
 	}
-	content, filename, err := getFromFile("file", req)
-	if err != nil {
-		return fmt.Errorf("failed to get the file content: %v", err)
-	}
-	err = ioutil.WriteFile(filename+"-mod", content, os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("failed to dump the content into -mod file")
-	}
-
 	for key, _ := range req.Form {
-		fmt.Printf("%s = %s\n", key, req.Form.Get(key))
+		klog.Infof("%s = %s\n", key, req.Form.Get(key))
 	}
 
 	if req.Form.Get("source") == "" || req.Form.Get("commit") == "" || req.Form.Get("project") == "" {
 		return fmt.Errorf("source, commit and project are the must have form params")
 	}
+	params := req.URL.Query()
+	dryrun := params.Get("dryrun")
 
-	err = sess.Upload(myBucket, fmt.Sprintf("%s/%s/%s", req.Form.Get("project"), req.Form.Get("commit"), filename), content)
-	if err != nil {
-		return fmt.Errorf("failed to upload the content to S3 object store")
+	var files []string
+	for fl := range req.MultipartForm.File {
+		content, filename, err := getFromFile(fl, req)
+		if err != nil {
+			return fmt.Errorf("failed to get the file content: %v", err)
+		}
+		klog.Infof("file found in the request: %s and the actual filename is %s", fl, filename)
+		files = append(files, filename)
+		if dryrun != "" {
+			continue
+		}
+		err = sess.Upload(myBucket, fmt.Sprintf("%s/%s/%s", req.Form.Get("project"), req.Form.Get("commit"), filename), content)
+		if err != nil {
+			return fmt.Errorf("failed to upload the file: %s to S3 object store", fl)
+		}
 	}
-
 	b := Build{
 		req.Form.Get("source"),
 		req.Form.Get("commit"),
-		filename,
+		files,
 		req.Form.Get("project"),
 	}
 	if dryrun != "" {
-		klog.Infoln(b)
+		klog.Infof("Build: %v", b)
 		return nil
 	}
-
 	tmpfs, err := ioutil.TempFile("", "build")
 	if err != nil {
 		return fmt.Errorf("failed to create a tempfile: %v", err)

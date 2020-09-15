@@ -13,7 +13,7 @@ import (
 type Build struct {
 	Source    string `json:"source"`
 	Commit    string `json:"commit"`
-	Artifacts string `json:"artifacts"`
+	Artifacts []string `json:"artifacts"`
 	Project   string `json:"project"`
 }
 
