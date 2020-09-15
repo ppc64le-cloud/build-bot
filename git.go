@@ -142,9 +142,9 @@ func handleGetBuild(w http.ResponseWriter, req *http.Request) error {
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal the build.yaml content to Build structure")
 		}
-		content, err = sess.Download(myBucket, fmt.Sprintf("%s/%s/%s", project, commit, build.Artifacts))
+		content, err = sess.Download(myBucket, fmt.Sprintf("%s/%s/%s", project, commit, build.Artifacts[0]))
 		if err != nil {
-			return fmt.Errorf("failed to get %s/%s/%s from the bucket", project, commit, build.Artifacts)
+			return fmt.Errorf("failed to get %s/%s/%s from the bucket", project, commit, build.Artifacts[0])
 		}
 
 		contentType := http.DetectContentType(content)
