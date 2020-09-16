@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"k8s.io/klog/v2"
+	_ "net/http/pprof"
 )
 
 type Build struct {
@@ -44,6 +45,7 @@ func health(w http.ResponseWriter, req *http.Request) {
 func main() {
 	klog.Info("Start: build-bot")
 	r := mux.NewRouter()
+	r.PathPrefix("/debug/pprof/").Handler(http.DefaultServeMux)
 	r.HandleFunc("/build", build).Methods("GET", "POST")
 	r.HandleFunc("/health", health).Methods("GET")
 	err := r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
