@@ -245,7 +245,7 @@ func handlePostBuild(req *http.Request) error {
 
 	file := fmt.Sprintf("%s:%s/build.yaml", tmpfs.Name(), b.Project)
 	commitMessage := fmt.Sprintf("%s commit %s", b.Project, b.Commit)
-	commitBranch := "br1"
+	commitBranch := strconv.FormatInt(time.Now().Unix(),10)
 	baseBranch := "master"
 	prSubject := fmt.Sprintf("Update %s build", b.Project)
 	prDescription := "This is an automated PR via build-bot"
