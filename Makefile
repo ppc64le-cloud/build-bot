@@ -1,4 +1,4 @@
-VERSION?=latest
+VERSION?=validation-team
 IMAGE_REPO=quay.io/powercloud
 IMAGE_NAME=build-bot
 ARCH?=amd64

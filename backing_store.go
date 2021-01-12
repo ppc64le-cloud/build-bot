@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	myBucket = "ci-builds"
+	myBucket = "bucket-validation-team"
 )
 
 var (
