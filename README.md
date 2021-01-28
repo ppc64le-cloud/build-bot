@@ -1,4 +1,4 @@
-# build-bot
+# Build Bot
 Bot for tracking the builds
 
 # How to Build and Push container images
