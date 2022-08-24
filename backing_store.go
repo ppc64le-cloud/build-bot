@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	myBucket = "ci-builds"
+	myBucket = "ppc64le-ci-builds"
 )
 
 var (
