@@ -15,5 +15,5 @@ require (
 	github.com/go-logr/logr v0.2.0 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.3.0 // indirect
-	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2 // indirect
+	golang.org/x/crypto v0.35.0 // indirect
 )
