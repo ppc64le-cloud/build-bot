@@ -1,6 +1,6 @@
 module github.com/ppc64le-cloud/build-bot
 
-go 1.23.0
+go 1.24.0
 
 require (
 	github.com/aws/aws-sdk-go v1.34.16
@@ -15,5 +15,5 @@ require (
 	github.com/go-logr/logr v0.2.0 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.3.0 // indirect
-	golang.org/x/crypto v0.35.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
 )
