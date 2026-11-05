@@ -1,4 +1,4 @@
-FROM golang:1.15 as builder
+FROM public.ecr.aws/docker/library/golang:1.27 as builder
 ARG ARCH
 WORKDIR /go/src/github.com/ppc64le-cloud/build-bot
 
