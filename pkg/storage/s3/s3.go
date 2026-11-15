@@ -3,6 +3,7 @@ package s3
 import (
 	"bytes"
 	"fmt"
+	"net/http"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
@@ -18,6 +19,7 @@ var _ storage.Storage = &S3{}
 type S3 struct{
 	credentials *Credentials
 	sess *session.Session
+	client *s3.S3
 	uploader *s3manager.Uploader
 	downloader *s3manager.Downloader
 }
@@ -63,6 +65,7 @@ func NewSession(s3Credentials *Credentials) (*S3, error){
 	return &S3 {
 		s3Credentials,
 		sess,
+		s3.New(sess),
 		s3manager.NewUploader(sess),
 		s3manager.NewDownloader(sess),
 	},  nil
@@ -85,13 +88,33 @@ func (s *S3) Download(bucket, object string) ([]byte, error) {
 
 func (s *S3) Upload(bucket string, object string, content []byte) error {
 	result, err := s.uploader.Upload(&s3manager.UploadInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(object),
-		Body:   bytes.NewReader(content),
+		Bucket:      aws.String(bucket),
+		Key:         aws.String(object),
+		Body:        bytes.NewReader(content),
+		ContentType: aws.String(http.DetectContentType(content)),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to upload file, %v", err)
 	}
 	fmt.Printf("file uploaded to, %s\n", aws.StringValue(&result.Location))
 	return nil
+}
+
+func (s *S3) Head(bucket, object string) (*storage.ObjectInfo, error) {
+	out, err := s.client.HeadObject(&s3.HeadObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(object),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to head %s/%s: %w", bucket, object, err)
+	}
+
+	info := &storage.ObjectInfo{}
+	if out.ContentLength != nil {
+		info.ContentLength = *out.ContentLength
+	}
+	if out.ContentType != nil {
+		info.ContentType = *out.ContentType
+	}
+	return info, nil
 }

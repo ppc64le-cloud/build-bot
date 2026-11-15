@@ -8,12 +8,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"k8s.io/klog"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"k8s.io/klog"
 
 	"github.com/google/go-github/v32/github"
 	"golang.org/x/oauth2"
@@ -123,6 +124,12 @@ func createPR(prSubject, prDescription, prBranch, commitBranch *string) (err err
 	return nil
 }
 
+func setArtifactHeaders(w http.ResponseWriter, name, contentType string, length int64) {
+	w.Header().Set("Content-Disposition", "attachment; filename="+name)
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Length", strconv.FormatInt(length, 10))
+}
+
 func handleGetBuild(w http.ResponseWriter, req *http.Request) error {
 	params := req.URL.Query()
 	project := params.Get("project")
@@ -142,20 +149,29 @@ func handleGetBuild(w http.ResponseWriter, req *http.Request) error {
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal the build.yaml content to Build structure")
 		}
-		content, err = sess.Download(myBucket, fmt.Sprintf("%s/%s/%s", project, commit, build.Artifacts[0]))
-		if err != nil {
-			return fmt.Errorf("failed to get %s/%s/%s from the bucket", project, commit, build.Artifacts[0])
+
+		if len(build.Artifacts) == 0 {
+			return fmt.Errorf("no artifacts found in %s/%s/build.yaml", project, commit)
+		}
+		artifact := build.Artifacts[0]
+		artifactPath := fmt.Sprintf("%s/%s/%s", project, commit, artifact)
+
+		if req.Method == http.MethodHead {
+			info, err := sess.Head(myBucket, artifactPath)
+			if err != nil {
+				return fmt.Errorf("failed to get %s from the bucket", artifactPath)
+			}
+
+			setArtifactHeaders(w, artifact, info.ContentType, info.ContentLength)
+			return nil
 		}
 
-		contentType := http.DetectContentType(content)
+		content, err = sess.Download(myBucket, artifactPath)
+		if err != nil {
+			return fmt.Errorf("failed to get %s from the bucket", artifactPath)
+		}
 
-		size := strconv.FormatInt(int64(len(content)), 10)
-
-		//Send the headers
-		w.Header().Set("Content-Disposition", "attachment; filename="+build.Artifacts[0])
-		w.Header().Set("Content-Type", contentType)
-		w.Header().Set("Content-Length", size)
-
+		setArtifactHeaders(w, artifact, http.DetectContentType(content), int64(len(content)))
 		io.Copy(w, bytes.NewReader(content))
 	}
 	return nil
@@ -245,7 +261,7 @@ func handlePostBuild(req *http.Request) error {
 
 	file := fmt.Sprintf("%s:%s/build.yaml", tmpfs.Name(), b.Project)
 	commitMessage := fmt.Sprintf("%s commit %s", b.Project, b.Commit)
-	commitBranch := strconv.FormatInt(time.Now().Unix(),10)
+	commitBranch := strconv.FormatInt(time.Now().Unix(), 10)
 	baseBranch := "master"
 	prSubject := fmt.Sprintf("Update %s build", b.Project)
 	prDescription := "This is an automated PR via build-bot"

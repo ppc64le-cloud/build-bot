@@ -29,7 +29,7 @@ func build(w http.ResponseWriter, req *http.Request) {
 		if err := handlePostBuild(req); err != nil {
 			http.Error(w, fmt.Sprintf("failed to handle the build: %v", err), http.StatusInternalServerError)
 		}
-	case http.MethodGet:
+	case http.MethodGet, http.MethodHead:
 		if err := handleGetBuild(w, req); err != nil {
 			http.Error(w, fmt.Sprintf("failed to handle the build: %v", err), http.StatusInternalServerError)
 		}
@@ -46,7 +46,7 @@ func main() {
 	klog.Info("Start: build-bot")
 	r := mux.NewRouter()
 	r.PathPrefix("/debug/pprof/").Handler(http.DefaultServeMux)
-	r.HandleFunc("/build", build).Methods("GET", "POST")
+	r.HandleFunc("/build", build).Methods("GET", "POST", "HEAD")
 	r.HandleFunc("/health", health).Methods("GET")
 	err := r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		pathTemplate, err := route.GetPathTemplate()
